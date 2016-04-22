@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Static server designed for responding to API requests",
   "main": "index.js",
+  "bin": "./bin/statical",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -12,5 +13,8 @@
     "koa": "^1.0.0",
     "mime-types": "^2.0.0",
     "mz": "^2.0.0"
+  },
+  "optionalDependencies": {
+    "koa-logger": "^1.0.0"
   }
 }

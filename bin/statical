@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+var koa = require('koa')
+var logger = require('../optional-logger')
+var statical = require('..')
+
+var PORT = Number(process.env.PORT || 3000)
+var DIR = process.argv[2] || process.cwd()
+
+koa()
+  .use(logger)
+  .use(statical(DIR))
+  .listen(PORT, function () {
+    console.log(`static-api started on port ${PORT}`)
+  })

@@ -2,52 +2,65 @@ var path = require('path')
 var fs = require('mz/fs')
 var mime = require('mime-types')
 
-function potentialFiles (basepath, request) {
-  var dirname = path.join(basepath, path.dirname(request.path))
-  var filename = path.basename(request.path)
-  var methodPrefix = request.method === 'GET' ? '' : `${request.method}:`
-  if (path.extname(filename) === '') {
-    return [
-      path.join(dirname, methodPrefix + `${filename}.json`),
-      path.join(dirname, filename, methodPrefix + 'index.json')
-    ]
-  } else {
-    return [path.join(dirname, methodPrefix + filename)]
+function * exista () {
+  var filepath = path.join.apply(null, arguments)
+  if (yield fs.exists(filepath)) {
+    return filepath
   }
 }
 
-function processContents (response, contents) {
-  if (contents.indexOf('===---===') !== -1) {
-    var splitContents = contents.split('===---===')
-    contents = splitContents[1]
-    var headers = splitContents[0]
-    for (var headerLine of headers.split('\n')) {
-      var splitLine = headerLine.split(/: */)
-      var field = splitLine[0]
-      var value = splitLine[1]
-      if (field.toLowerCase() === 'status') {
-        response.status = Number(value)
-      } else if (field) {
-        response.set(field, value)
-      }
+function * resolve (basepath, request) {
+  var methodPrefix = request.method === 'GET' ? '' : `${request.method}:`
+
+  var dirname = path.join(basepath, path.dirname(request.path))
+  var filename = path.basename(request.path)
+  if (path.extname(filename)) {
+    return yield exista(dirname, methodPrefix + filename)
+  }
+
+  return (yield exista(dirname, methodPrefix + `${filename}.json`)) ||
+    (yield exista(dirname, filename, methodPrefix + 'index.json'))
+}
+
+function parseHeaders (headersRaw) {
+  var headers = []
+  for (var headerLine of headersRaw.split('\n')) {
+    var split = headerLine.split(/: */)
+    var field = split[0]
+    var value = split[1]
+    if (field.toLowerCase() === 'status') {
+      headers.status = Number(value)
+    } else if (field) {
+      headers[field] = value
     }
   }
-  response.body = contents
-  return response
+  return headers
 }
 
 module.exports = function (basepath) {
   return function * () {
-    for (var fullpath of potentialFiles(basepath, this.request)) {
-      var exists = yield fs.exists(fullpath)
-      if (exists) {
-        this.type = mime.contentType(path.basename(fullpath))
-        var contents = yield fs.readFile(fullpath, 'utf8')
-        return processContents(this, contents)
-      }
+    var filepath = yield resolve(basepath, this.request)
+    if (!filepath) {
+      this.status = 404
+      this.body = 'Not found'
+      return
     }
 
-    this.status = 404
-    this.body = 'Not found'
+    this.type = mime.contentType(path.basename(filepath))
+    var contents = yield fs.readFile(filepath, 'utf8')
+
+    if (contents.indexOf('===---===') === -1) {
+      this.body = contents
+      return
+    }
+
+    var split = contents.split('===---===')
+    var headers = parseHeaders(split[0])
+    if (headers.status) {
+      this.status = headers.status
+      delete headers.status
+    }
+    this.set(headers)
+    this.body = split[1]
   }
 }

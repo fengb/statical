@@ -3,13 +3,14 @@
 var koa = require('koa')
 var logger = require('../optional-logger')
 var statical = require('..')
+var path = require('path')
 
 var PORT = Number(process.env.PORT || 3000)
-var DIR = process.argv[2] || process.cwd()
+var DIR = path.resolve(process.argv[2] || process.cwd())
 
 koa()
   .use(logger)
   .use(statical(DIR))
   .listen(PORT, function () {
-    console.log(`static-api started on port ${PORT}`)
+    console.log(`static-api started on port '${PORT}' in directory '${DIR}'`)
   })

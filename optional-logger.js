@@ -1,6 +1,9 @@
 module.exports =
   attempt(() => require('koa-logger')())
-  || attempt(() => function * (next) { yield next })
+  || function * (next) {
+       yield next
+       console.log(`  ${this.request.method} ${this.request.path} ${this.status}`)
+     }
 
 function attempt (func) {
   try {

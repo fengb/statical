@@ -1,16 +1,46 @@
 #!/usr/bin/env node
 
-var koa = require('koa')
-var logger = require('../optional-logger')
-var statical = require('..')
 var path = require('path')
 
-var PORT = Number(process.env.PORT || 3000)
-var DIR = path.resolve(process.argv[2] || process.cwd())
+function parseArgs (args) {
+  var ret = []
+  for (var arg of args) {
+    if (arg[0] === '-') {
+      ret[arg] = true
+    } else {
+      ret.push(arg)
+    }
+  }
+  return ret
+}
 
-koa()
-  .use(logger)
-  .use(statical(DIR))
-  .listen(PORT, function () {
-    console.log(`static-api started on port '${PORT}' in directory '${DIR}'`)
-  })
+var args = parseArgs(process.argv.slice(2))
+var DIR = path.resolve(args[0] || process.cwd())
+
+function cmp(v1, v2) {
+  return v1 < v2 ? -1 : v1 > v2 ? 1 : 0
+}
+
+if (args['--routes']) {
+  var routes = require('../routes')
+  routes(DIR).then((all) => {
+    all.sort((r1, r2) => cmp(r1.path, r2.path) || cmp(r1.method, r2.method))
+    all.forEach((route) => {
+      var pad = Array(6 - route.method.length).join(' ')
+      console.log(`${route.method} ${pad} ${route.path}`)
+    })
+  }).catch(console.warn)
+} else {
+  var koa = require('koa')
+  var logger = require('../optional-logger')
+  var statical = require('..')
+
+  var PORT = Number(process.env.PORT || 3000)
+
+  koa()
+    .use(logger)
+    .use(statical(DIR))
+    .listen(PORT, function () {
+      console.log(`static-api started on port '${PORT}' in directory '${DIR}'`)
+    })
+}

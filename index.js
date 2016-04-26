@@ -1,26 +1,7 @@
 var path = require('path')
 var fs = require('mz/fs')
 var mime = require('mime-types')
-
-function * exista () {
-  var filepath = path.join.apply(null, arguments)
-  if (yield fs.exists(filepath)) {
-    return filepath
-  }
-}
-
-function * resolve (basepath, request) {
-  var methodPrefix = request.method === 'GET' ? '' : `${request.method}:`
-
-  var dirname = path.join(basepath, path.dirname(request.path))
-  var filename = path.basename(request.path)
-  if (path.extname(filename)) {
-    return yield exista(dirname, methodPrefix + filename)
-  }
-
-  return (yield exista(dirname, methodPrefix + `${filename}.json`)) ||
-    (yield exista(dirname, filename, methodPrefix + 'index.json'))
-}
+var router = require('./router')
 
 function parseHeaders (headersRaw) {
   var headers = []
@@ -38,8 +19,9 @@ function parseHeaders (headersRaw) {
 }
 
 module.exports = function (basepath) {
+  var routeur = router(basepath)
   return function * () {
-    var filepath = yield resolve(basepath, this.request)
+    var filepath = yield routeur.fetchFilepath(this.request)
     if (!filepath) {
       this.status = 404
       this.body = 'Not found'

@@ -10,11 +10,34 @@ var MATCHER = new RegExp(''
   + '$'
 )
 
+function * exista (path) {
+  var exists = yield fs.exists(path)
+  if (exists) {
+    return path
+  }
+}
+
 module.exports = function (serveDir) {
   return {
     fetchAllRoutes: co.wrap(function * () {
       var files = yield this.fetchAllFiles()
       return files.map((file) => this.toRoute(file))
+    }),
+
+    fetchFilepath: co.wrap(function * (route) {
+      var methodPrefix = route.method === 'GET' ? '' : `${route.method}:`
+
+      var filename = path.basename(route.path)
+      if (!filename) {
+        return yield exista(path.join(serveDir, methodPrefix + 'index.json'))
+      }
+
+      if (path.extname(filename) !== '') {
+        return yield exista(path.join(serveDir, methodPrefix + filename))
+      }
+
+      return (yield exista(path.join(serveDir, methodPrefix + `${filename}.json`))) ||
+         (yield exista(path.join(serveDir, filename, methodPrefix + 'index.json')))
     }),
 
     toRoute: function (filepath) {

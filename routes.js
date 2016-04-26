@@ -2,6 +2,26 @@ var co = require('co')
 var fs = require('mz/fs')
 var path = require('path')
 
+var MATCHER = new RegExp(''
+  + '^'
+  + '(.*?)'          // path
+  + '(?:([A-Z]+):)?' // method
+  + '([^/]*)'        // resource
+  + '$'
+)
+
+module.exports = function (serveDir) {
+  return {
+    toRoute: function (filepath) {
+      var match = MATCHER.exec(filepath.replace(serveDir, ''))
+      return {
+        method: match[2] || 'GET',
+        path: path.join(match[1], match[3])
+      }
+    }
+  }
+}
+
 function * routeFiles (dir) {
   var ret = []
   var files = yield fs.readdir(dir)
@@ -17,17 +37,3 @@ function * routeFiles (dir) {
   }
   return ret
 }
-
-function fromFile (serveDir, filepath) {
-  var MATCHER = /^(.*?)(?:([A-Z]+):)?([^\/]*)$/
-  var match = MATCHER.exec(filepath.replace(serveDir, ''))
-  return {
-    method: match[2] || 'GET',
-    path: path.join(match[1], match[3])
-  }
-}
-
-module.exports = co.wrap(function * routes (dir) {
-  var files = yield routeFiles(dir)
-  return files.map((file) => fromFile(dir, file))
-})

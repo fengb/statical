@@ -22,8 +22,8 @@ function cmp(v1, v2) {
 }
 
 if (args['--routes']) {
-  var routes = require('../routes')
-  routes(DIR).fetchAllRoutes().then((all) => {
+  var router = require('../router')
+  router(DIR).fetchAllRoutes().then((all) => {
     all.sort((r1, r2) => cmp(r1.path, r2.path) || cmp(r1.method, r2.method))
     all.forEach((route) => {
       var pad = Array(6 - route.method.length).join(' ')

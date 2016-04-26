@@ -1,7 +1,7 @@
 var expect = require('chai').expect
-var router = require('../routes')
+var router = require('../router')
 
-describe('routes', function () {
+describe('router', function () {
   beforeEach(function () {
     this.router = router('target')
   })
